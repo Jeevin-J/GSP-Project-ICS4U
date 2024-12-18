@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Taking App</title>
+</head>
+<body>
+    <h1>Welcome to the Note-Taking App!</h1>
+    <form action="/add" method="post">
+        <input type="text" name="note" placeholder="Write a note" required>
+        <button type="submit">Add Note</button>
+    </form>
+    <h2>Your Notes:</h2>
+    <ul>
+        {% for note in notes %}
+            <li>
+                {{ note }} 
+                <a href="/delete/{{ loop.index0 }}">Delete</a>
+            </li>
+        {% else %}
+            <li>No notes yet!</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
