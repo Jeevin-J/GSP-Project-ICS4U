@@ -3,74 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Note Taking App</title>
+    <title>Interactive Jamboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
 </head>
 <body>
-    <h1>Note Taking App</h1>
-    <form id="note-form">
-        <input type="text" id="note-input" placeholder="Write a note" required>
-        <button type="submit">Add Note</button>
-    </form>
-    <h2>Your Notes:</h2>
-    <div id="note-grid"></div> <!-- Changed to a grid container -->
+    <h1>Interactive Jamboard</h1>
+    <div id="toolbar">
+        <button id="add-sticky">Add Sticky Note</button>
+        <button id="draw-mode">Draw</button>
+        <button id="add-image">Add Image</button>
+        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+        <button id="clear-board">Clear Board</button>
+    </div>
+    <div id="board-container">
+        <canvas id="drawing-canvas"></canvas>
+    </div>
 
-    <script>
-        // Get references to HTML elements
-        const form = document.getElementById('note-form');
-        const noteInput = document.getElementById('note-input');
-        const noteGrid = document.getElementById('note-grid');
-
-        // Function to load notes from localStorage
-        function loadNotes() {
-            const notes = JSON.parse(localStorage.getItem('notes')) || [];
-            noteGrid.innerHTML = ''; // Clear the current grid
-            notes.forEach((note, index) => {
-                const noteBlock = document.createElement('div');
-                noteBlock.classList.add('note-block');
-                const noteText = document.createElement('p');
-                noteText.textContent = note;
-                const deleteBtn = document.createElement('button');
-                deleteBtn.classList.add('delete-btn');
-                deleteBtn.onclick = () => deleteNote(index);
-                const deleteIcon = document.createElement('img');
-                deleteIcon.src = "{{ url_for('static', filename='delete-icon.png') }}"; // Path to your PNG
-                deleteIcon.alt = "Delete Note";
-                deleteBtn.appendChild(deleteIcon);
-                noteBlock.appendChild(noteText);
-                noteBlock.appendChild(deleteBtn);
-                noteGrid.appendChild(noteBlock);
-            });
-        }
-
-        // Function to save a note
-        function saveNote(note) {
-            const notes = JSON.parse(localStorage.getItem('notes')) || [];
-            notes.push(note);
-            localStorage.setItem('notes', JSON.stringify(notes));
-            loadNotes(); // Refresh the notes grid
-        }
-
-        // Function to delete a note
-        function deleteNote(index) {
-            const notes = JSON.parse(localStorage.getItem('notes')) || [];
-            notes.splice(index, 1);
-            localStorage.setItem('notes', JSON.stringify(notes));
-            loadNotes(); // Refresh the notes grid
-        }
-
-        // Handle form submission
-        form.addEventListener('submit', (e) => {
-            e.preventDefault(); // Prevent the page from refreshing
-            const note = noteInput.value.trim();
-            if (note) {
-                saveNote(note);
-                noteInput.value = ''; // Clear the input field
-            }
-        });
-
-        // Load notes on page load
-        loadNotes();
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
