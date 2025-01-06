@@ -1,70 +1,43 @@
-const canvas = document.getElementById('drawing-canvas');
-const ctx = canvas.getContext('2d');
 
-// Set canvas dimensions
-canvas.width = canvas.offsetWidth;
-canvas.height = canvas.offsetHeight;
+const canvas = new fabric.Canvas('drawing-canvas', {
+    width: window.innerWidth,
+    height: window.innerHeight - 100,
+    backgroundColor: '#f9f9f9',
+});
+
+// Resize the canvas dynamically
+window.addEventListener('resize', () => {
+    canvas.setWidth(window.innerWidth);
+    canvas.setHeight(window.innerHeight - 100);
+});
+
+// Customize transform controls globally
+fabric.Object.prototype.set({
+    cornerColor: 'blue',
+    cornerStyle: 'circle',
+    borderColor: 'blue',
+    transparentCorners: false,
+    rotatingPointOffset: 20,
+});
 
 // Variables for drawing
 let isDrawing = false;
 let drawMode = false;
 
-// Drawing functionality
-canvas.addEventListener('mousedown', (e) => {
-    if (!drawMode) return;
-    isDrawing = true;
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
-});
-
-canvas.addEventListener('mousemove', (e) => {
-    if (!isDrawing || !drawMode) return;
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-});
-
-canvas.addEventListener('mouseup', () => {
-    isDrawing = false;
-});
-
 document.getElementById('add-sticky').addEventListener('click', () => {
-    const sticky = document.createElement('div');
-    sticky.contentEditable = true;
-    sticky.classList.add('sticky-note');
-    sticky.style.position = 'absolute';
-    sticky.style.left = '100px';
-    sticky.style.top = '100px';
-    sticky.style.width = '150px';
-    sticky.style.height = '150px';
-    sticky.style.backgroundColor = '#ffff88';
-    sticky.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.3)';
-    sticky.style.border = '1px solid #ccc';
-    sticky.style.borderRadius = '5px';
-    sticky.style.padding = '10px';
-    sticky.style.zIndex = '2';
-    sticky.setAttribute('draggable', 'true');
-
-    // Drag functionality
-    sticky.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', null); // Required for Firefox
-        sticky.dataset.offsetX = e.offsetX;
-        sticky.dataset.offsetY = e.offsetY;
+    const sticky = new fabric.Textbox('Sticky Note', {
+        left: 100,
+        top: 100,
+        width: 200,
+        fontSize: 16,
+        backgroundColor: '#ffff88',
+        borderColor: 'blue',
+        cornerColor: 'blue',
+        cornerStyle: 'circle',
+        editable: true,
+        padding: 10,
     });
-
-    sticky.addEventListener('drag', (e) => {
-        if (e.pageX === 0 && e.pageY === 0) return; // Ignore invalid events
-        const offsetX = sticky.dataset.offsetX || 0;
-        const offsetY = sticky.dataset.offsetY || 0;
-        sticky.style.left = `${e.pageX - offsetX}px`;
-        sticky.style.top = `${e.pageY - offsetY}px`;
-    });
-
-    sticky.addEventListener('dragend', () => {
-        sticky.removeAttribute('data-offset-x');
-        sticky.removeAttribute('data-offset-y');
-    });
-
-    document.getElementById('board-container').appendChild(sticky);
+    canvas.add(sticky);
 });
 
 document.getElementById('add-image').addEventListener('click', () => {
@@ -75,32 +48,34 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.style.position = 'absolute';
-    img.style.left = '100px';
-    img.style.top = '100px';
-    img.style.width = '200px';
-    img.style.height = 'auto';
-    img.draggable = true;
-
-    img.addEventListener('dragstart', (e) => {
-        img.dataset.offsetX = e.offsetX;
-        img.dataset.offsetY = e.offsetY;
-    });
-
-    img.addEventListener('drag', (e) => {
-        if (e.pageX === 0 && e.pageY === 0) return;
-        const offsetX = img.dataset.offsetX || 0;
-        const offsetY = img.dataset.offsetY || 0;
-        img.style.left = `${e.pageX - offsetX}px`;
-        img.style.top = `${e.pageY - offsetY}px`;
-    });
-
-    img.addEventListener('dragend', () => {
-        img.removeAttribute('data-offset-x');
-        img.removeAttribute('data-offset-y');
-    });
-
-    document.getElementById('board-container').appendChild(img);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        fabric.Image.fromURL(event.target.result, (img) => {
+            img.set({
+                left: 100,
+                top: 100,
+                cornerColor: 'blue',
+                cornerStyle: 'circle',
+                lockUniScaling: false,
+            });
+            canvas.add(img);
+        });
+    };
+    reader.readAsDataURL(file);
 });
+
+document.getElementById('draw-mode').addEventListener('click', () => {
+    canvas.isDrawingMode = !canvas.isDrawingMode;
+    const btn = document.getElementById('draw-mode');
+    btn.textContent = canvas.isDrawingMode ? 'Stop Drawing' : 'Draw';
+
+    // Configure the drawing brush
+    canvas.freeDrawingBrush.color = 'black';
+    canvas.freeDrawingBrush.width = 5;
+});
+
+document.getElementById('clear-board').addEventListener('click', () => {
+    canvas.clear();
+    canvas.backgroundColor = '#f9f9f9';
+});
+
