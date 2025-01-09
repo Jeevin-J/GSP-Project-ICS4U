@@ -1,5 +1,3 @@
-// script.js
-
 const canvas = new fabric.Canvas('drawing-canvas', {
     width: window.innerWidth,
     height: window.innerHeight - 100,
@@ -24,6 +22,7 @@ const customizationMenu = document.getElementById('customization-menu');
 // Undo/Redo Stacks
 let undoStack = [];
 let redoStack = [];
+let clipboard = null; // To store the copied objects
 
 // Function to save the current state of the canvas
 function saveState() {
@@ -57,22 +56,14 @@ document.getElementById('add-text').addEventListener('click', () => {
     saveState();
 });
 
-// Selection Menu Updates
-canvas.on('selection:created', updateMenu);
-canvas.on('selection:updated', updateMenu);
-canvas.on('selection:cleared', () => {
-    customizationMenu.style.display = 'none';
-});
+// Remove existing selection event listeners
+canvas.off('selection:created');
+canvas.off('selection:updated');
 
-canvas.on('object:moving', (e) => {
-    const activeObject = e.target;
-    if (activeObject && activeObject.type === 'textbox') {
-        positionMenu(activeObject);
-    }
-});
+// Add double-click event listener for text objects
+canvas.on('mouse:dblclick', (e) => {
+    const activeObject = canvas.findTarget(e.e);
 
-function updateMenu() {
-    const activeObject = canvas.getActiveObject();
     if (activeObject && activeObject.type === 'textbox') {
         customizationMenu.style.display = 'flex';
         customizationMenu.style.left = `${activeObject.left + canvas._offset.left}px`;
@@ -84,7 +75,19 @@ function updateMenu() {
     } else {
         customizationMenu.style.display = 'none';
     }
-}
+});
+
+// Hide customization menu when selection is cleared
+canvas.on('selection:cleared', () => {
+    customizationMenu.style.display = 'none';
+});
+
+canvas.on('object:moving', (e) => {
+    const activeObject = e.target;
+    if (activeObject && activeObject.type === 'textbox') {
+        positionMenu(activeObject);
+    }
+});
 
 function positionMenu(activeObject) {
     customizationMenu.style.left = `${activeObject.left + canvas._offset.left}px`;
@@ -199,16 +202,44 @@ penSizeInput.addEventListener('input', (e) => {
     canvas.freeDrawingBrush.width = parseInt(e.target.value, 10);
 });
 
-
-
 // Add this event listener for keydown events (for delete)
 window.addEventListener('keydown', (e) => {
-    // Check for Backspace or Ctrl+X (or Cmd+X on macOS)
-    if (e.key === 'Backspace' || (e.ctrlKey && e.key === 'x') || (e.metaKey && e.key === 'x')) {
-        const activeObject = canvas.getActiveObject();
+    const activeObject = canvas.getActiveObject();
+
+    // Check for Ctrl+X (or Cmd+X on macOS)
+    if ((e.ctrlKey && e.key === 'x') || (e.metaKey && e.key === 'x')) {
         if (activeObject) {
             canvas.remove(activeObject); // Remove the selected object from the canvas
             saveState(); // Save the state after removal
+            e.preventDefault(); // Prevent the default cut behavior
+        }
+    }
+
+    // Check for Ctrl+C (or Cmd+C on macOS) to copy objects
+    if ((e.ctrlKey && e.key === 'c') || (e.metaKey && e.key === 'c')) {
+        if (activeObject) {
+            canvas.getActiveObject().clone((cloned) => {
+                clipboard = cloned;
+            });
+            e.preventDefault(); // Prevent the default copy behavior
+        }
+    }
+
+    // Check for Ctrl+V (or Cmd+V on macOS) to paste objects
+    if ((e.ctrlKey && e.key === 'v') || (e.metaKey && e.key === 'v')) {
+        if (clipboard) {
+            clipboard.clone((clonedObj) => {
+                canvas.discardActiveObject();
+                clonedObj.set({
+                    left: clonedObj.left + 10,
+                    top: clonedObj.top + 10,
+                });
+                canvas.add(clonedObj);
+                canvas.setActiveObject(clonedObj);
+                canvas.requestRenderAll();
+                saveState();
+            });
+            e.preventDefault(); // Prevent the default paste behavior
         }
     }
 
@@ -235,6 +266,31 @@ window.addEventListener('keydown', (e) => {
             canvas.loadFromJSON(nextState, () => {
                 canvas.renderAll();
             });
+        }
+    }
+});
+
+// Paste image from clipboard
+window.addEventListener('paste', (e) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                fabric.Image.fromURL(event.target.result, (img) => {
+                    img.set({
+                        left: 100,
+                        top: 100,
+                        cornerColor: 'blue',
+                        cornerStyle: 'circle',
+                        lockUniScaling: false,
+                    });
+                    canvas.add(img);
+                    saveState();
+                });
+            };
+            reader.readAsDataURL(blob);
         }
     }
 });
