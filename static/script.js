@@ -22,20 +22,38 @@ const customizationMenu = document.getElementById('customization-menu');
 // Undo/Redo Stacks
 let undoStack = [];
 let redoStack = [];
+let isUndoing = false;
+let isRedoing = false;
 let clipboard = null; // To store the copied objects
 
 // Function to save the current state of the canvas
 function saveState() {
-    // Push the current state to the undo stack (deep clone the canvas)
-    undoStack.push(JSON.stringify(canvas.toJSON()));
-    // Clear the redo stack, as new actions invalidate the redo history
-    redoStack = [];
+    if (!isUndoing && !isRedoing) {
+        const json = JSON.stringify(canvas.toJSON());
+        undoStack.push(json);
+        redoStack = []; // Clear the redo stack whenever a new action is performed
+    }
 }
 
-// Listen for object changes to save the state
-canvas.on('object:modified', () => {
-    saveState();
-});
+// Save canvas content to localStorage
+function saveCanvas() {
+    const json = JSON.stringify(canvas.toJSON());
+    localStorage.setItem('canvasContent', json);
+}
+
+// Load canvas content from localStorage
+function loadCanvas() {
+    const canvasContent = localStorage.getItem('canvasContent');
+    if (canvasContent) {
+        canvas.loadFromJSON(canvasContent, () => {
+            canvas.renderAll();
+        });
+    }
+}
+
+// Listen for object changes and new paths to save the state
+canvas.on('object:modified', saveState);
+canvas.on('path:created', saveState);
 
 // Add Text Button
 document.getElementById('add-text').addEventListener('click', () => {
@@ -153,6 +171,7 @@ document.getElementById('draw-mode').addEventListener('click', () => {
     canvas.isDrawingMode = !canvas.isDrawingMode;
     const btn = document.getElementById('draw-mode');
     btn.textContent = canvas.isDrawingMode ? 'Stop Drawing' : 'Draw';
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
     canvas.freeDrawingBrush.color = 'black';
     canvas.freeDrawingBrush.width = 5;
 });
@@ -202,7 +221,7 @@ penSizeInput.addEventListener('input', (e) => {
     canvas.freeDrawingBrush.width = parseInt(e.target.value, 10);
 });
 
-// Add this event listener for keydown events (for delete)
+// Add this event listener for keydown events (for delete, undo, redo, and save)
 window.addEventListener('keydown', (e) => {
     const activeObjects = canvas.getActiveObjects();
 
@@ -288,12 +307,13 @@ window.addEventListener('keydown', (e) => {
     // Undo (Ctrl+Z or Cmd+Z)
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault(); // Prevent default undo action
-        const lastState = undoStack.pop(); // Get the last state
-        if (lastState) {
-            // Push the current state to the redo stack before changing it
-            redoStack.push(JSON.stringify(canvas.toJSON()));
+        if (undoStack.length > 0) {
+            isUndoing = true;
+            const lastState = undoStack.pop(); // Get the last state
+            redoStack.push(JSON.stringify(canvas.toJSON())); // Push the current state to the redo stack before changing it
             canvas.loadFromJSON(lastState, () => {
                 canvas.renderAll();
+                isUndoing = false;
             });
         }
     }
@@ -301,13 +321,23 @@ window.addEventListener('keydown', (e) => {
     // Redo (Ctrl+Y or Cmd+Y)
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault(); // Prevent default redo action
-        const nextState = redoStack.pop(); // Get the next state from redo stack
-        if (nextState) {
-            // Push the current state to the undo stack before changing it
-            undoStack.push(JSON.stringify(canvas.toJSON()));
+        if (redoStack.length > 0) {
+            isRedoing = true;
+            const nextState = redoStack.pop(); // Get the next state from redo stack
+            undoStack.push(JSON.stringify(canvas.toJSON())); // Push the current state to the undo stack before changing it
             canvas.loadFromJSON(nextState, () => {
                 canvas.renderAll();
+                isRedoing = false;
             });
+        }
+    }
+
+    // Save (Ctrl+S or Cmd+S)
+    if ((e.ctrlKey && e.key === 's') || (e.metaKey && e.key === 's')) {
+        e.preventDefault(); // Prevent default save action
+        if (confirm("Would you like to save the current board?")) {
+            saveCanvas();
+            alert("Board saved successfully!");
         }
     }
 });
@@ -341,3 +371,4 @@ window.addEventListener('paste', (e) => {
 
 // Initialize the first state (when the page loads)
 saveState();
+loadCanvas(); // Load the saved canvas content when the page loads
