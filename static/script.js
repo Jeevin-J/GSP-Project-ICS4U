@@ -204,43 +204,85 @@ penSizeInput.addEventListener('input', (e) => {
 
 // Add this event listener for keydown events (for delete)
 window.addEventListener('keydown', (e) => {
-    const activeObject = canvas.getActiveObject();
+    const activeObjects = canvas.getActiveObjects();
 
-    // Check for Ctrl+X (or Cmd+X on macOS)
+    // Check for Ctrl+X (or Cmd+X on macOS) to cut objects
     if ((e.ctrlKey && e.key === 'x') || (e.metaKey && e.key === 'x')) {
-        if (activeObject) {
-            canvas.remove(activeObject); // Remove the selected object from the canvas
-            saveState(); // Save the state after removal
-            e.preventDefault(); // Prevent the default cut behavior
+        if (activeObjects.length) {
+            clipboard = new fabric.Group(activeObjects).toObject();
+            canvas.remove(...activeObjects);
         }
+        canvas.discardActiveObject();
+        saveState();
+        e.preventDefault(); // Prevent the default cut behavior
     }
 
     // Check for Ctrl+C (or Cmd+C on macOS) to copy objects
     if ((e.ctrlKey && e.key === 'c') || (e.metaKey && e.key === 'c')) {
-        if (activeObject) {
-            canvas.getActiveObject().clone((cloned) => {
-                clipboard = cloned;
-            });
-            e.preventDefault(); // Prevent the default copy behavior
+        if (activeObjects.length) {
+            clipboard = new fabric.Group(activeObjects).toObject();
         }
+        e.preventDefault(); // Prevent the default copy behavior
     }
 
     // Check for Ctrl+V (or Cmd+V on macOS) to paste objects
     if ((e.ctrlKey && e.key === 'v') || (e.metaKey && e.key === 'v')) {
         if (clipboard) {
-            clipboard.clone((clonedObj) => {
-                canvas.discardActiveObject();
-                clonedObj.set({
-                    left: clonedObj.left + 10,
-                    top: clonedObj.top + 10,
+            fabric.util.enlivenObjects([clipboard], (objects) => {
+                objects.forEach((obj) => {
+                    obj.set({
+                        left: obj.left + 10,
+                        top: obj.top + 10,
+                    });
+                    canvas.add(obj);
                 });
-                canvas.add(clonedObj);
-                canvas.setActiveObject(clonedObj);
+                canvas.discardActiveObject();
                 canvas.requestRenderAll();
                 saveState();
+                clipboard = null; // Clear the clipboard after pasting
             });
-            e.preventDefault(); // Prevent the default paste behavior
+        } else {
+            // Handle external image pasting
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        fabric.Image.fromURL(event.target.result, (img) => {
+                            img.set({
+                                left: 100,
+                                top: 100,
+                                cornerColor: 'blue',
+                                cornerStyle: 'circle',
+                                lockUniScaling: false,
+                            });
+                            canvas.add(img);
+                            saveState();
+                        });
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault(); // Prevent the default paste behavior
+                    break; // Break the loop once an image is found and processed
+                }
+            }
         }
+    }
+
+    // Check for Ctrl+Shift+V to clear the clipboard
+    if ((e.ctrlKey && e.shiftKey && e.key === 'V') || (e.metaKey && e.shiftKey && e.key === 'V')) {
+        clipboard = null;
+        e.preventDefault(); // Prevent the default behavior
+    }
+
+    // Check for Delete key to remove selected objects
+    if (e.key === 'Delete') {
+        if (activeObjects.length) {
+            canvas.remove(...activeObjects);
+            canvas.discardActiveObject();
+            saveState();
+        }
+        e.preventDefault(); // Prevent the default delete behavior
     }
 
     // Undo (Ctrl+Z or Cmd+Z)
@@ -270,7 +312,7 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Paste image from clipboard
+// Paste image from clipboard (handle external image pasting separately)
 window.addEventListener('paste', (e) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
@@ -291,6 +333,8 @@ window.addEventListener('paste', (e) => {
                 });
             };
             reader.readAsDataURL(blob);
+            e.preventDefault(); // Prevent the default paste behavior
+            break; // Break the loop once an image is found and processed
         }
     }
 });
