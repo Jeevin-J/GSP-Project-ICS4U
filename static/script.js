@@ -1,3 +1,4 @@
+// Initialize Fabric.js canvas
 const canvas = new fabric.Canvas('drawing-canvas', {
     width: window.innerWidth,
     height: window.innerHeight - 100,
@@ -164,6 +165,48 @@ document.getElementById('italic-btn').addEventListener('click', () => {
         const currentFontStyle = activeObject.fontStyle;
         activeObject.set('fontStyle', currentFontStyle === 'italic' ? '' : 'italic');
         canvas.renderAll();
+    }
+});
+
+// Prompt for API Key if not available
+function getApiKey() {
+    let apiKey = localStorage.getItem('huggingfaceApiKey');
+    if (!apiKey) {
+        apiKey = prompt("Please enter your Hugging Face API key:");
+        if (apiKey) {
+            localStorage.setItem('huggingfaceApiKey', apiKey);
+        } else {
+            alert("API key is required to use the Rewrite functionality.");
+        }
+    }
+    return apiKey;
+}
+
+// Function to paraphrase text using Hugging Face API
+async function paraphraseText(text) {
+    const apiKey = getApiKey();
+    if (!apiKey) return text;
+
+    const response = await fetch('https://api-inference.huggingface.co/models/t5-small', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ inputs: `paraphrase: ${text}`, parameters: { max_length: 200 } })
+    });
+    const data = await response.json();
+    return data[0]?.generated_text || text;
+}
+
+// Add this event listener for the rewrite button
+document.getElementById('rewrite-btn').addEventListener('click', async () => {
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && activeObject.type === 'textbox') {
+        const newText = await paraphraseText(activeObject.text);
+        activeObject.set('text', newText);
+        canvas.renderAll();
+        saveState();
     }
 });
 

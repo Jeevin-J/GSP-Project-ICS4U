@@ -56,8 +56,44 @@ canvas {
     font-size: 12px; /* Match the font size */
 }
 
-#customization-menu .menu-align {
+#customization-menu .menu-align,
+#customization-menu #bold-btn,
+#customization-menu #italic-btn,
+#customization-menu #rewrite-btn {
     padding: 1px 3px; /* Smaller button size */
     font-size: 12px;
 }
 
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+.modal-content button {
+    padding: 10px 20px;
+}

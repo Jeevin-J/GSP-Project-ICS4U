@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Jamboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
 <body>
     <h1>Interactive Jamboard</h1>
@@ -40,6 +42,7 @@
         <label>   </label>
         <button id="bold-btn">B</button>
         <button id="italic-btn">I</button>
+        <button id="rewrite-btn">Rewrite</button>
     </div>
 
     <!-- Customization menu for drawing -->
@@ -51,7 +54,13 @@
         <input type="range" id="pen-size" min="1" max="20" value="5">
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Modal for API Key -->
+    <div id="api-key-modal" class="modal">
+        <div class="modal-content">
+            <h2>Enter Your API Key</h2>
+            <input type="text" id="api-key-input" placeholder="Enter your Hugging Face API key">
+            <button id="save-api-key-btn">Save API Key</button>
+        </div>
+    </div>
 </body>
 </html>
